@@ -18,6 +18,7 @@ TODO:
 * libsodium-dev
 * libopus-dev
 * [youtube-dl](https://rg3.github.io/youtube-dl/)
+* mongodb
 
 ###Configuration###
 * Rename config.sample to config.rb
