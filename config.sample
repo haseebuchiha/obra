@@ -1,0 +1,36 @@
+$environtmetns = {
+  development: {
+    discord: {
+      client_id: client_id,
+      token: 'bot_token',
+      name: 'One Bot to Rule Them All',
+      fancy_log: true,
+      prefix: '!',
+      command_doesnt_exist_message: "Unknown command, use:\n**!help**"
+    },
+    soundcloud: {
+      client_id: 'client_id',
+      client_secret: 'client_secret'
+    }
+  },
+  production: {
+    discord: {
+      client_id: client_id,
+      token: 'bot_token',
+      name: 'One Bot to Rule Them All',
+      fancy_log: true,
+      prefix: '!',
+      command_doesnt_exist_message: "Unknown command, use:\n**!help**"
+    },
+    soundcloud: {
+      client_id: 'client_id',
+      client_secret: 'client_secret'
+    }
+  }
+}
+
+# to run server in production mode just run 'touch production' from terminal in
+# project root dir
+$env = File.exists?('production') ? :production : :development
+$config = $environtmetns[$env]
+

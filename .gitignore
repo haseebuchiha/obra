@@ -1,0 +1,12 @@
+*.swp
+*.swo
+
+data/sounds/soundcloud/*
+data/sounds/youtube/*
+data/sounds/effects/*
+
+production
+logs
+
+config.rb
+Gemfile.lock
