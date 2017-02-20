@@ -8,5 +8,5 @@ data/sounds/effects/*
 production
 logs
 
-config.rb
+src/config.rb
 Gemfile.lock

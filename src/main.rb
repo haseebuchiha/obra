@@ -2,11 +2,11 @@ require 'discordrb'
 require 'soundcloud'
 require 'mongo'
 
-require './config'
-require './helper'
-require './soundcloud_helper'
-require './youtube_helper'
-require './giphy_helper'
+require_relative 'config'
+require_relative 'helpers/common_helper'
+require_relative 'helpers/soundcloud_helper'
+require_relative 'helpers/youtube_helper'
+require_relative 'helpers/giphy_helper'
 
 class Obra
   include GenericHelper
@@ -248,7 +248,7 @@ class Obra
 
       if param == 'shuffle'
         @song_queue.shuffle!
-        'Kardi Song Queue ulti sedhi'
+        'Shuffled song Queue.'
       elsif param == 'loop'
         # toggle looping playback
         @loop_playback = !@loop_playback

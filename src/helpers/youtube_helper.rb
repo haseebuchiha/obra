@@ -1,9 +1,9 @@
 require 'json'
-require './helper'
+require_relative 'common_helper'
 
 # https://www.youtube.com/playlist?list=PLC516EA09C1C873CF'
 module YoutubeHelper
-  ROOT_DIR = 'data/sounds/youtube'
+  ROOT_DIR = '../data/sounds/youtube'
   sound_url = ARGV[0] #'https://soundcloud.com/kristiannairn/kristian-nairn-jan-2017-mix-two' #'https://soundcloud.com/tomac_music/tomac-pablo-artigas' #'https://soundcloud.com/asfandyarkhan/a-sudden-sullen-turn'
 
   def download_youtube_mp3 yt_url
