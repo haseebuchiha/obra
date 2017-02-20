@@ -93,12 +93,12 @@ class Obra
 
     # joins words passed by args and then use it as search term to search gif
     # returns a random gif from all the searched gifs
-    @discord_cbot.command(:gif, description: 'Gif dhond k launga maza aega') do |e,*args|
+    @discord_cbot.command(:gif, description: 'Fetches a random gif from Giphy based on your query.', usage: '!gif cats') do |e,*args|
       gif_search args.join(' ')
     end
 
     # return leaderboards
-    @discord_cbot.command(:levels, description: 'Istemal kar k dekhen k kon kitna **Wela** ha', usage: '!levels') do |e|
+    @discord_cbot.command(:levels, description: 'Ranks of Members based on their activity.', usage: '!levels') do |e|
       ret = "**User Levels:**\n\n"
 
       # get user ranks in descending order
@@ -117,52 +117,52 @@ class Obra
       @discord_cbot.update_status('Playing', 'DivineLight', 'http://www.twitch.tv/blackdivine')
     end
 
-    @discord_cbot.command(:ping, description: 'Bilawaja ki command ha. Ignore', usage: '!ping') do |e|
-      e.respond 'Na tang kar bhai!'
+    @discord_cbot.command(:ping, description: 'Ignore this command.', usage: '!ping') do |e|
+      e.respond 'Told you to Ignore it xD'
     end
 
     # connects to your voice channel
-    @discord_cbot.command(:aja, description: 'Ap jis voice channel men ho usmen a jaunga', usage: '!aja') do |e|
+    @discord_cbot.command(:voice, description: 'Joins your voice channel.', usage: '!voice') do |e|
       user = e.user
       vchannel = user.voice_channel
 
       if vchannel.nil?
-        "Pehlay ap khud to kisi voice channel men chalay jao sastay <@#{user.id}>"
+        "Please sit in a voice channel yourself <@#{user.id}>"
       else
         @voice_bot = @discord_cbot.voice_connect(vchannel)
         @voice_bot.volume = DEFAULT_VOLUME / 100.0
-        "Connected to **##{vchannel.name}** - **Chalo Chalen!**"
+        "Connected to **##{vchannel.name}** - **Lets Go!**"
       end
     end
 
 
     # disconnects from your voice channel
-    @discord_cbot.command(:ja, description: 'Mujhe voice channel se nikalna ho to ye istemal karen', usage: '!ja') do |e|
+    @discord_cbot.command(:leave, description: 'Leaves your voice channel!', usage: '!leave') do |e|
       return if @voice_bot.nil?
 
       @voice_bot.destroy
       @voice_bot = nil
-      "Left voice channel - **Khush?**"
+      "Left voice channel - **Happy?**"
     end
 
 
     # Pause playing sound
     @discord_cbot.command(:pause) do |e|
       @voice_bot.pause
-      "**Rok diya bhai - !unpause se chala lena Jab Azaan ho jae**"
+      "**Stopped - Use !unpause to resume Playback**"
     end
 
     # Stops playing sound
     @discord_cbot.command(:stop) do |e|
       @stop_playing = true
       @voice_bot.stop_playing true
-      "**Ganay ni sun'ne phir?**\n!play se chala lena jab dil karay."
+      "Stopped playback."
     end
 
     # UnPause playing sound
     @discord_cbot.command(:unpause, description: 'Resumes playback of song') do |e|
       @voice_bot.continue
-      "**Wapis chala diya. Mahol Mahol Mahol**"
+      "**Resumed playback.**"
     end
 
     # Skip song for n seconds
@@ -170,12 +170,12 @@ class Obra
       secs = args[0].to_f
 
       @voice_bot.skip secs
-      "**Skipped song for #{secs} Seconds.**\nWaise apas ki bat ha ye part mujhe b acha ni lagta tha"
+      "**Skipped song for #{secs} Seconds.**\nI didn't like this part too xD"
     end
 
     # Set or get volume of playback
-    @discord_cbot.command(:vol, description: 'Awaz onchi halki karnay k liye', usage: '!vol 0-100') do |e,*args|
-      return @discord_cbot.send_message(e.channel.id, "Pehlay kisi Voice channel me to bulao mujhe...") unless @voice_bot
+    @discord_cbot.command(:vol, description: 'To adjust volume', usage: '!vol 0-100') do |e,*args|
+      return @discord_cbot.send_message(e.channel.id, "Please use !voice first.") unless @voice_bot
 
       vol = args[0]
 
@@ -201,7 +201,7 @@ class Obra
         p sounds_list
         "**Available Sounds:**\n\n#{sounds_list}"
       else
-        return @discord_cbot.send_message(text_channel.id, "Voice bot not found.") unless @voice_bot
+        return @discord_cbot.send_message(text_channel.id, "Please use !voice first.") unless @voice_bot
         return @discord_cbot.send_message(text_channel.id, "Stop music first..") if @voice_bot.isplaying?
 
         sound_path = File.join SOUND_EFFECTD_ROOT, "#{se_name}.mp3"
@@ -212,9 +212,9 @@ class Obra
     end
 
     # A simple command that plays back an mp3 file.
-    @discord_cbot.command(:play, description: 'Soundcloud ya Youtube k ganay ka link do men chalaonga.', usage: '!play url') do |e, *args|
+    @discord_cbot.command(:play, description: 'Plays Soundcloud or Youtube Songs. Works with Single Song or Playlist URL', usage: '!play url') do |e, *args|
       # make sure we have a valid voice_bot
-      return @discord_cbot.send_message(e.channel.id, "Please sit in a Voice Channel and use !aja first") unless @voice_bot
+      return @discord_cbot.send_message(e.channel.id, "Please sit in a Voice Channel and use !voice first") unless @voice_bot
 
       url = args[0]
       text_channel = e.channel
@@ -232,18 +232,18 @@ class Obra
       elsif url.include? 'youtube'
         songs_details = download_youtube_mp3 url
       else
-        @discord_cbot.send_message(text_channel.id, '/tableflip Koi sahi Soundcloud ya Youtube ka URL do')
+        @discord_cbot.send_message(text_channel.id, 'Please give a proper Soundcloud or Youtube URL')
         return nil
       end
 
-      return @discord_cbot.send_message(text_channel.id, 'Koi rola a raha ha, DivineLight ko bta do') if songs_details.nil?
+      return @discord_cbot.send_message(text_channel.id, 'Some error, please contact creator of this Bot.') if songs_details.nil?
 
       # add songs to queue, and play first song
       queue_songs songs_details
       play_songs @voice_bot, text_channel
     end
 
-    @discord_cbot.command(:q, description: 'Current queued ganon ki list, shuffle or loop', usage: "\n!q\n!q shuffle\n!q loop") do |e, *args|
+    @discord_cbot.command(:q, description: 'Current queued songs, shuffle, loop or clear', usage: "\n!q\n!q shuffle\n!q loop\n!q clear") do |e, *args|
       param = args[0]
 
       if param == 'shuffle'
@@ -252,6 +252,11 @@ class Obra
       elsif param == 'loop'
         # toggle looping playback
         @loop_playback = !@loop_playback
+        @loop_playback ? 'Looping current track' : 'Not looping current track now'
+      elsif param == 'clear'
+        @song_queue = []
+        @voice_bot.stop_playing true
+        'Cleared song queue'
       else
         song_names = @song_queue.map.with_index { |x,i| "#{i+1} - **#{x[:name]}** - #{x[:duration]}" }
         ret = "**Song Queue:**\n\n" + song_names.join("\n")
@@ -262,7 +267,7 @@ class Obra
     end
 
     # skips current song and plays next in queue
-    @discord_cbot.command(:skip, description: 'Current song skip kar k next chalaonga', usage: '!skip') do |e|
+    @discord_cbot.command(:skip, description: 'Skips current song and plays next.', usage: '!skip') do |e|
       text_channel = e.channel
       song_details = @song_queue.first
 
@@ -280,10 +285,10 @@ class Obra
       song_details = @song_queue.first
 
       # Notify if no more songs left.
-      return @discord_cbot.send_message(discord_text_channel.id, "Song queue khatam...") unless song_details
+      return @discord_cbot.send_message(discord_text_channel.id, "Song queue exhausted...") unless song_details
 
       # return if a song is already being played
-      return @discord_cbot.send_message(discord_text_channel.id, "Pehlay hi playing, Song queued...") if @voice_bot.isplaying?
+      return @discord_cbot.send_message(discord_text_channel.id, "Already playing, Song queued...") if @voice_bot.isplaying?
 
       # loop through all songs playing them until queue finishes
       # play_file is a blocking call
@@ -292,7 +297,7 @@ class Obra
 
         puts "Song queue now: #{@song_queue.inspect}\n-------\n"
 
-        send_msg discord_text_channel.id, "Ab chalaya ha **#{song_details[:name]}** - #{song_details[:duration]}"
+        send_msg discord_text_channel.id, "Now Playing **#{song_details[:name]}** - #{song_details[:duration]}"
 
         # catch exceptions so we don't break player if some error occurs in play_file
         begin
