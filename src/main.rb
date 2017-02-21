@@ -154,6 +154,8 @@ class Obra
 
     # Stops playing sound
     @discord_cbot.command(:stop) do |e|
+      @loop_playback = false if @loop_playback
+
       @stop_playing = true
       @voice_bot.stop_playing true
       "Stopped playback."
@@ -281,6 +283,8 @@ class Obra
       song_details = @song_queue.first
 
       return unless song_details # return if no song present in queue
+
+      @loop_playback = false if @loop_playback
 
       # stop current song, play_songs will automatically
       # remove this song from queue and start next song
