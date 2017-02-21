@@ -1,46 +1,23 @@
+# frozen_string_literal: true
+#
+# Generic helper contains utility functions that do not
+# belong to a particular helper
 module GenericHelper
-
   def sanitize_filename(filename)
     filename.strip!
     # NOTE: File.basename doesn't work right with Windows paths on Unix
     # get only the filename, not the whole path
-    filename.gsub!(/^.*(\\|\/)/, '')
+    filename.gsub!(%r{/^.*(\\|\/)/}, '')
 
     # Strip out the non-ascii character
-    filename.gsub!(/[^0-9A-Za-z.\-]/, '_')
+    filename.gsub!(%r{/[^0-9A-Za-z.\-]/}, '_')
 
     filename
   end
 
-  def pretty_time time_in_milli_secs
-    Time.at(time_in_milli_secs/1000).utc.strftime('%H:%M:%S')
+  def pretty_time(time_in_milli_secs)
+    Time.at(time_in_milli_secs / 1000).utc.strftime('%H:%M:%S')
   end
-
-  def join_users_voice_channel_if_not_already discord_cbot, discord_event
-    discord_user = discord_event.user
-    cchannel = discord_event.channel
-    vchannel = discord_user.voice_channel
-    voice_bot = discord_event.voice
-
-    # notify user if he's not in a voice channel
-    if vchannel.nil?
-      discord_cbot.send_message cchannel, "Pehlay ap kisi voice channel men to chalay jao sastay <@#{discord_user.id}>"
-      return false
-    end
-
-    # do nothing if voice bot already connected to this server on users' voice channel
-    if discord_cbot.voices[$config[:server_id]] && vchannel.id == voice_bot.channel.id
-      puts "Already connected to voice channel #{voice_bot.channel.name}\nDoing noting"
-      return voice_bot
-    end
-
-    # connect to users voice channel
-    discord_cbot.voice_connect(vchannel)
-    discord_cbot.send_message cchannel, "Voice channel: **#{vchannel.name}** men a gya."
-
-    voice_bot
-  end
-
 end
 
 # adds color text printing to puts String

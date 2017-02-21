@@ -9,4 +9,4 @@ gem 'httparty'
 #gem 'mechanize'
 
 gem 'mongo'
-#gem 'rubocop', require: false
+gem 'rubocop', require: false
