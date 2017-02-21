@@ -258,11 +258,20 @@ class Obra
         @voice_bot.stop_playing true
         'Cleared song queue'
       else
-        song_names = @song_queue.map.with_index { |x,i| "#{i+1} - **#{x[:name]}** - #{x[:duration]}" }
-        ret = "**Song Queue:**\n\n" + song_names.join("\n")
-        p ret
+        song_names_with_info = @song_queue.map.with_index do |song_detail,i|
+          queue_details = "#{i+1} - **#{song_detail[:name]}** - "
 
-        ret
+          # calculate song played duration if we have started_at information
+          if song_detail[:started_at]
+            time_delta = Time.now - song_detail[:started_at]
+            time_played = pretty_time time_delta * 1000
+            queue_details += "#{time_played}/"
+          end
+
+          queue_details += "#{song_detail[:duration]}"
+        end
+
+        ret = "**Song Queue:**\n\n" + song_names_with_info.join("\n")
       end
     end
 
@@ -303,6 +312,7 @@ class Obra
         begin
           mp3_path = song_details[:local_path]
 
+          song_details[:started_at] = Time.now
           @voice_bot.play_file mp3_path
 
           # keep playing same song while @loop_playback is true
