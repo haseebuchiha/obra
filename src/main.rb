@@ -61,12 +61,19 @@ class Obra
   def hook_commands
     t = Time.now
 
+    @discord_cbot.command(:reset_levels) do |e, *args|
+      return unless is_admin? e.user.id
+
+      @ranks_collection.delete_many {}
+      ':boom: Resetted user levels :boom:'
+    end
+
     @discord_cbot.command(:prune) do |e, *args|
       return unless is_admin? e.user.id
 
       n = args[0].to_i
       e.channel.prune n
-      e.channel.send_temporary_message "Deleted last #{n} Messages...", 3
+      e.channel.send_temporary_message ":boom: Deleted last #{n} Messages :boom:", 3
     end
 
     # we track every message to give points to user
