@@ -1,1 +1,14 @@
-clear;cd src;bundle exec ruby main.rb
+#!/bin/bash
+
+MODE=$1
+
+echo $MODE
+
+if [[ $MODE == 'test' ]];
+then
+  export irbc="require_relative 'src/tester.rb'\ninclude ObraTester\n"
+  echo $irbc
+  cd src;bundle exec irb
+else
+  clear;cd src;bundle exec ruby main.rb
+fi

@@ -61,12 +61,20 @@ class Obra
   def hook_commands
     t = Time.now
 
+    @discord_cbot.command(:prune) do |e, *args|
+      return unless is_admin? e.user.id
+
+      n = args[0].to_i
+      e.channel.prune n
+      e.channel.send_temporary_message "Deleted last #{n} Messages...", 3
+    end
+
     # we track every message to give points to user
     #  and save it in DB
     #  user levels up at each power of 2 posts, 1, 2, 4, 8, 16 etc
     @discord_cbot.message(contains: '') do |e|
       user_id = e.author.id
-      row = {user_id: user_id}
+      row = {_id: user_id}
 
       old_row = @ranks_collection.find(row).first
       unless old_row
@@ -111,7 +119,7 @@ class Obra
       # get user ranks in descending order
       @ranks_collection.find.sort({level: -1}).each do |ur|
         lvl = ur['level']
-        ret += "<@#{ur['user_id']}> lvl#{lvl} *#{@lvl_titles[lvl]}*\n"
+        ret += "<@#{ur['_id']}> lvl#{lvl} *#{@lvl_titles[lvl]}*\n"
       end
 
       ret

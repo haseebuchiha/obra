@@ -20,6 +20,11 @@ module GenericHelper
   end
 end
 
+def is_admin? user_id
+  admin_id = $config[:discord][:admin_id]
+  user_id == admin_id
+end
+
 # adds color text printing to puts String
 # use like puts "Hello world".red
 class String
