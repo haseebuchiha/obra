@@ -2,6 +2,8 @@ require 'discordrb'
 require 'soundcloud'
 require 'mongo'
 
+require 'pp'
+
 require_relative 'config'
 require_relative 'helpers/common_helper'
 require_relative 'helpers/soundcloud_helper'
@@ -91,6 +93,11 @@ class Obra
       #e.respond e.message
     end
 
+    # reply user via PM if he mentions bot
+    @discord_cbot.mention do |event|
+      event.user.pm('Stop mentioning me... I am busy.')
+    end
+
     # joins words passed by args and then use it as search term to search gif
     # returns a random gif from all the searched gifs
     @discord_cbot.command(:gif, description: 'Fetches a random gif from Giphy based on your query.', usage: '!gif cats') do |e,*args|
@@ -117,8 +124,14 @@ class Obra
       @discord_cbot.update_status('Playing', 'DivineLight', 'http://www.twitch.tv/blackdivine')
     end
 
-    @discord_cbot.command(:ping, description: 'Ignore this command.', usage: '!ping') do |e|
-      e.respond 'Told you to Ignore it xD'
+    @discord_cbot.command(:ping, description: 'To display Bot\'s ping.', usage: '!ping') do |e|
+      ping_in_ms = ((Time.now - e.timestamp) * 1000).round
+      "Pong! #{ping_in_ms}ms"
+    end
+
+    # echo back the PM sent to our bot
+    @discord_cbot.private_message do |e|
+      e.user.pm e.message.content
     end
 
     # connects to your voice channel
