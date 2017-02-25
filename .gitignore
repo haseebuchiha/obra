@@ -1,9 +1,7 @@
 *.swp
 *.swo
 
-data/sounds/soundcloud/*
-data/sounds/youtube/*
-data/sounds/effects/*
+data/*
 
 production
 logs

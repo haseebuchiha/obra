@@ -3,11 +3,11 @@ require_relative 'common_helper'
 
 # https://www.youtube.com/playlist?list=PLC516EA09C1C873CF'
 module YoutubeHelper
-  ROOT_DIR = '../data/sounds/youtube'
+  ROOT_DIR = '../../data/sounds/youtube'
   sound_url = ARGV[0] #'https://soundcloud.com/kristiannairn/kristian-nairn-jan-2017-mix-two' #'https://soundcloud.com/tomac_music/tomac-pablo-artigas' #'https://soundcloud.com/asfandyarkhan/a-sudden-sullen-turn'
 
   def download_youtube_mp3 yt_url
-    cmd = 'youtube-dl -i --max-filesize 150m -x --audio-format "mp3" -o "data/sounds/youtube/%(id)s.%(ext)s" '
+    cmd = 'youtube-dl -i --max-filesize 150m -x --audio-format "mp3" -o "' + ROOT_DIR + '%(id)s.%(ext)s" '
     cmd += '--write-info-json --no-post-overwrites --no-part -w ' + yt_url 
 
     # return song details array

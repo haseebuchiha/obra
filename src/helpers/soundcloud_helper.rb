@@ -4,7 +4,7 @@ require_relative '../config'
 module SoundCloudHelper
   include GenericHelper
 
-  ROOT_DIR = '../data/sounds/soundcloud'
+  ROOT_DIR = '../../data/sounds/soundcloud'
 
   # takes soundcloud URL of a song or a Playlist
   # downloads the tracks and
