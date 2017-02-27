@@ -18,7 +18,7 @@ class Obra
 
   # constants
   SOUND_EFFECTD_ROOT = 'data/sounds/effects/'
-  DEFAULT_VOLUME = 25.25
+  DEFAULT_VOLUME = 15.25
 
   attr_reader :song_queue
 
@@ -242,27 +242,32 @@ class Obra
     end
 
     # A simple command that plays back an mp3 file.
-    @discord_cbot.command(:play, description: 'Plays Soundcloud or Youtube Songs. Works with Single Song or Playlist URL', usage: '!play url') do |e, *args|
-      # make sure we have a valid voice_bot
-      return @discord_cbot.send_message(e.channel.id, "Please sit in a Voice Channel and use !voice first") unless @voice_bot
-
+    @discord_cbot.command(:play, description: 'Plays Soundcloud or Youtube Songs.', usage: '!play url_of_sc_or_yt') do |e, *args|
       url = args[0]
       text_channel = e.channel
+      puts "URL Given to Play: #{url.inspect}\n"
+
+      # make sure we have a valid voice_bot
+      return text_channel.send_temporary_message(':x: Please sit in a Voice Channel and use !voice first', 5) unless @voice_bot
+
 
       # no url specified, resume song playing
       if url.nil?
         @stop_playing = false
-        @discord_cbot.send_message text_channel.id, 'Resumed playback...' and return nil
+        text_channel.send_message ':musical_note: Resumed playback...' and return nil
         play_songs @voice_bot, text_channel
       end
 
       songs_details = nil
+
       if url.include? 'soundcloud'
+        text_channel.send_message ':notes: Downloading SoundCloud song... Please wait.'
         songs_details = download_soundcloud_mp3 url
       elsif url.include? 'youtube'
+        text_channel.send_message ':notes: Downloading Youtube song... Please wait.'
         songs_details = download_youtube_mp3 url
       else
-        @discord_cbot.send_message(text_channel.id, 'Please give a proper Soundcloud or Youtube URL')
+        text_channel.send_message ':x: Please give a proper Soundcloud or Youtube URL'
         return nil
       end
 
@@ -318,7 +323,7 @@ class Obra
       # remove this song from queue and start next song
       @voice_bot.stop_playing
 
-      "Skipped **#{song_details[:name]}** on request of #{e.user.name}"
+      "Skipped **#{song_details[:name]}** on request of <@#{e.user.id}>"
     end
 
     # plays next song in queue
@@ -326,10 +331,10 @@ class Obra
       song_details = @song_queue.first
 
       # Notify if no more songs left.
-      return @discord_cbot.send_message(discord_text_channel.id, "Song queue exhausted...") unless song_details
+      return discord_text_channel.send_message 'Song queue exhausted...' unless song_details
 
       # return if a song is already being played
-      return @discord_cbot.send_message(discord_text_channel.id, "Already playing, Song queued...") if @voice_bot.isplaying?
+      return discord_text_channel.send_temporary_message ':musical_note: Already playing, Song queued...', 5 if @voice_bot.isplaying?
 
       # loop through all songs playing them until queue finishes
       # play_file is a blocking call
@@ -338,7 +343,7 @@ class Obra
 
         puts "Song queue now: #{@song_queue.inspect}\n-------\n"
 
-        send_msg discord_text_channel.id, "Now Playing **#{song_details[:name]}** - #{song_details[:duration]}"
+        send_msg discord_text_channel.id, ":musical_note: Now Playing **#{song_details[:name]}** - #{song_details[:duration]}"
 
         # catch exceptions so we don't break player if some error occurs in play_file
         begin
