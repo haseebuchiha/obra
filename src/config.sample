@@ -6,7 +6,8 @@ $environtmetns = {
       name: 'One Bot to Rule Them All',
       fancy_log: true,
       prefix: '!',
-      command_doesnt_exist_message: "Unknown command, use:\n**!help**"
+      command_doesnt_exist_message: "Unknown command, use:\n**!help**",
+      admin_id: 124355631359590401 # for admin only commands, so that normal users can't use them
     },
     soundcloud: {
       client_id: 'client_id',
@@ -20,7 +21,8 @@ $environtmetns = {
       name: 'One Bot to Rule Them All',
       fancy_log: true,
       prefix: '!',
-      command_doesnt_exist_message: "Unknown command, use:\n**!help**"
+      command_doesnt_exist_message: "Unknown command, use:\n**!help**",
+      admin_id: 124355631359590401
     },
     soundcloud: {
       client_id: 'client_id',

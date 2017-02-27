@@ -4,21 +4,28 @@ require_relative '../config'
 module SoundCloudHelper
   include GenericHelper
 
-  ROOT_DIR = '../../data/sounds/soundcloud'
+  CURRENT_DIR = File.dirname(__FILE__)
+  ROOT_DIR = "#{CURRENT_DIR}/../../data/sounds/soundcloud"
 
   # takes soundcloud URL of a song or a Playlist
   # downloads the tracks and
   # returns array of hashes, with song details
   def download_soundcloud_mp3 sc_url
-    sc_client = SoundCloud.new $config[:soundcloud]
+    sc_config = $config[:soundcloud]
+    puts "Creating soundcloud Client with: #{sc_config.inspect}\nDownload URL: #{sc_url}\n"
+
+    sc_client = SoundCloud.new sc_config
 
     # call the resolve endpoint with a track url
     begin
       track = sc_client.get('/resolve', url: sc_url)
     rescue Exception => e
-      p 'Exception: '
-      p e
-      return nil
+      puts "Exception: #{e.inspect}\n"
+
+      # return if single song, keep going in case of playlist
+      # because one or more tracks give exception when creator
+      # of them mark them as private but most do get downloaded
+      return nil unless track.kind == 'playlist'
     end
 
     # return song details array
