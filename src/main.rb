@@ -33,8 +33,11 @@ class Obra
     # Discordrb command bot
     @discord_cbot = Discordrb::Commands::CommandBot.new discord_cbot_settings
 
-    # this holds songs queued in form of {name: 'song name', local_path: 'path/to/song.mp3'}
-    @song_queue = []
+    # this holds songs queued in form of {name: 'song name', local_path: 'path/to/song.mp3'...}
+    @songs_queue = []
+
+    # this holds songs searched, same format as above
+    @searched_songs_queue = []
 
     # voice bot we use to play sounds/songs
     @voice_bot = nil
@@ -52,7 +55,7 @@ class Obra
   end
 
   def run
-    puts "Starting Obtrta...\n"
+    puts "Starting OBRA...\n"
 
     self.hook_commands
     @discord_cbot.run
@@ -242,7 +245,9 @@ class Obra
     end
 
     # A simple command that plays back an mp3 file.
-    @discord_cbot.command(:play, description: 'Plays Soundcloud or Youtube Songs.', usage: '!play url_of_sc_or_yt') do |e, *args|
+    play_usage = '!play url of Soundcloud/Youtube or search term'
+    play_description = 'Plays Soundcloud or Youtube Songs. Can search Soundcloud too'
+    @discord_cbot.command(:play, description: play_description, usage: play_usage) do |e, *args|
       url = args[0]
       text_channel = e.channel
       puts "URL Given to Play: #{url.inspect}\n"
@@ -255,19 +260,27 @@ class Obra
       if url.nil?
         @stop_playing = false
         text_channel.send_message ':musical_note: Resumed playback...' and return nil
-        play_songs @voice_bot, text_channel
+        play_songs text_channel
       end
 
       songs_details = nil
 
-      if url.include? 'soundcloud'
+      # 's' as first param means searched song play
+      if url == 's'
+        n = args[1].to_i - 1
+        text_channel.send_message ':notes: Downloading song... Please wait.'
+        songs_details = [download_sc_track_mp3(sc_client, @searched_songs_queue[n])]
+      elsif url.include? 'soundcloud'
         text_channel.send_message ':notes: Downloading SoundCloud song... Please wait.'
-        songs_details = download_soundcloud_mp3 url
+        songs_details = download_sc_mp3 url
       elsif url.include? 'youtube'
         text_channel.send_message ':notes: Downloading Youtube song... Please wait.'
-        songs_details = download_youtube_mp3 url
+        songs_details = download_yt_mp3 url
       else
-        text_channel.send_message ':x: Please give a proper Soundcloud or Youtube URL'
+        # not a proper URL so we search
+        q = args.join ' '
+        @searched_songs_queue = sc_search q
+        text_channel.send_message ":mag_right: Search Results: (use !play s n)\n#{format_songs_for_printing @searched_songs_queue}"
         return nil
       end
 
@@ -275,45 +288,32 @@ class Obra
 
       # add songs to queue, and play first song
       queue_songs songs_details
-      play_songs @voice_bot, text_channel
+      play_songs text_channel
     end
 
     @discord_cbot.command(:q, description: 'Current queued songs, shuffle, loop or clear', usage: "\n!q\n!q shuffle\n!q loop\n!q clear") do |e, *args|
       param = args[0]
 
       if param == 'shuffle'
-        @song_queue.shuffle!
+        @songs_queue.shuffle!
         'Shuffled song Queue.'
       elsif param == 'loop'
         # toggle looping playback
         @loop_playback = !@loop_playback
         @loop_playback ? 'Looping current track' : 'Not looping current track now'
       elsif param == 'clear'
-        @song_queue = []
+        @songs_queue = []
         @voice_bot.stop_playing true
         'Cleared song queue'
       else
-        song_names_with_info = @song_queue.map.with_index do |song_detail,i|
-          queue_details = "#{i+1} - **#{song_detail[:name]}** - "
-
-          # calculate song played duration if we have started_at information
-          if song_detail[:started_at]
-            time_delta = Time.now - song_detail[:started_at]
-            time_played = pretty_time time_delta * 1000
-            queue_details += "#{time_played}/"
-          end
-
-          queue_details += "#{song_detail[:duration]}"
-        end
-
-        ret = "**Song Queue:**\n\n" + song_names_with_info.join("\n")
+        ret = "**Song Queue:**\n\n" + format_songs_for_printing(@songs_queue)
       end
     end
 
     # skips current song and plays next in queue
     @discord_cbot.command(:skip, description: 'Skips current song and plays next.', usage: '!skip') do |e|
       text_channel = e.channel
-      song_details = @song_queue.first
+      song_details = @songs_queue.first
 
       return unless song_details # return if no song present in queue
 
@@ -327,8 +327,8 @@ class Obra
     end
 
     # plays next song in queue
-    def play_songs voice_bot, discord_text_channel
-      song_details = @song_queue.first
+    def play_songs discord_text_channel
+      song_details = @songs_queue.first
 
       # Notify if no more songs left.
       return discord_text_channel.send_message 'Song queue exhausted...' unless song_details
@@ -338,10 +338,10 @@ class Obra
 
       # loop through all songs playing them until queue finishes
       # play_file is a blocking call
-      while @song_queue.length > 0
-        song_details = @song_queue.first
+      while @songs_queue.length > 0
+        song_details = @songs_queue.first
 
-        puts "Song queue now: #{@song_queue.inspect}\n-------\n"
+        puts "Song queue now: #{@songs_queue.inspect}\n-------\n"
 
         send_msg discord_text_channel.id, ":musical_note: Now Playing **#{song_details[:name]}** - #{song_details[:duration]}"
 
@@ -370,23 +370,42 @@ class Obra
           end
         else
           # song finished, drop it from queue, and play next song
-          @song_queue.shift
+          @songs_queue.shift
         end
 
-      end # while @song_queue.length > 0
+      end # while @songs_queue.length > 0
     end
 
   end
 
   private
   def queue_songs songs_details = []
-    @song_queue += songs_details
+    @songs_queue += songs_details
 
     puts "Added these songs: " + songs_details.inspect
   end
 
   def send_msg chanid, text
     @discord_cbot.send_message chanid, text
+  end
+
+  # take songs array of hashes in our format
+  # and pretty formats them for printing
+  def format_songs_for_printing songs_list
+    song_names_with_info = songs_list.map.with_index do |song_detail,i|
+      queue_details = "#{i+1} - **#{song_detail[:name]}** - "
+
+      # calculate song played duration if we have started_at information
+      if song_detail[:started_at]
+        time_delta = Time.now - song_detail[:started_at]
+        time_played = pretty_time time_delta * 1000
+        queue_details += "#{time_played}/"
+      end
+
+      queue_details += "#{song_detail[:duration]}"
+    end
+
+    song_names_with_info.join "\n"
   end
 end
 

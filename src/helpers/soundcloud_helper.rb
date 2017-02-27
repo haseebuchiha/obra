@@ -10,11 +10,7 @@ module SoundCloudHelper
   # takes soundcloud URL of a song or a Playlist
   # downloads the tracks and
   # returns array of hashes, with song details
-  def download_soundcloud_mp3 sc_url
-    sc_config = $config[:soundcloud]
-    puts "Creating soundcloud Client with: #{sc_config.inspect}\nDownload URL: #{sc_url}\n"
-
-    sc_client = SoundCloud.new sc_config
+  def download_sc_mp3 sc_url
 
     # call the resolve endpoint with a track url
     begin
@@ -34,32 +30,69 @@ module SoundCloudHelper
     # if this is a playlist url, enquee all songs
     if track.kind == 'playlist'
       track.tracks.each do |t|
-        ret << save_track(sc_client, t)
+        ret << save_sc_track(t)
       end
     else
-      ret << save_track(sc_client, track)
+      ret << save_sc_track(track)
     end
 
     p ret
     return ret
   end
 
+  # returns array of tracks after searching for q
+  def sc_search q
+    tracks = sc_client.get('/tracks', :q => q, :licence => 'cc-by-sa')
+    details = []
+
+    tracks.each do |t|
+      details << track_to_h(t)
+    end
+
+    details
+  end
+
   # takes soundcloud track object and saves it locally in ROOT_DIR
   #  and returns track info as needed by our player
-  def save_track sc_client, track
+  def save_sc_track track
+    track_h = track_to_h track
+    download_sc_track_mp3 sc_client, track_h
+  end
+
+  # formats soundcloud track object to our formatted hash
+  def track_to_h track
     save_path = File.join ROOT_DIR, "#{track.id}.mp3"
-    download_track_mp3 sc_client, track, save_path unless File.exists?(save_path)
-    { name: track.title, length: track.duration, duration: pretty_time(track.duration), local_path: save_path }
+    {
+      type: 'soundcloud',
+      name: track.title,
+      stream_url: track.stream_url,
+      length: track.duration,
+      duration: pretty_time(track.duration),
+      local_path: save_path
+    }
   end
 
   # give sound cloud track and local save_path, it will download and save song as mp3
-  def download_track_mp3 sc_client, track, save_path
-    stream_url = sc_client.get(track.stream_url, :allow_redirects => true)
+  # returns track_h
+  def download_sc_track_mp3 sc_client, track_h
+    puts "download_track_mp3 called with\n#{track_h.inspect}\n"
+    return track_h if File.exists? track_h[:local_path]
 
-    open save_path, 'w' do |io|
-      puts "Downloading sound cloud mp3 chunks..."
+    stream_url = sc_client.get track_h[:stream_url], allow_redirects: true
+
+    open track_h[:local_path], 'w' do |io|
+      puts "Downloading sound cloud mp3 for #{track_h[:name]}..."
       io.write stream_url
     end
+
+    track_h
+  end
+
+  def sc_client
+    sc_config = $config[:soundcloud]
+    puts "Creating soundcloud Client with: #{sc_config.inspect}\n"
+
+    client = SoundCloud.new sc_config
   end
 
 end

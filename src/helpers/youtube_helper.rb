@@ -5,7 +5,7 @@ module YoutubeHelper
   CURRENT_DIR = File.dirname(__FILE__)
   ROOT_DIR = "#{CURRENT_DIR}/../../data/sounds/youtube"
 
-  def download_youtube_mp3 yt_url
+  def download_yt_mp3 yt_url
     puts "In download_youtube_mp3 with youtube URL: #{yt_url}\n"
     cmd = 'youtube-dl -i --max-filesize 150m -x --audio-format "mp3" -o "' + ROOT_DIR + '/%(id)s.%(ext)s" '
     cmd += '--write-info-json --no-post-overwrites --no-part -w ' + yt_url 
