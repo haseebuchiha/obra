@@ -7,13 +7,14 @@ TODO:
 * ~~Persist volume (when bot leaves and re-enters voice chan the volume resets)~~
 * ~~Track to what duration song was played and display song played duration in queue command.~~
 
-#How to Install#
-###Make Folders###
+# How to Install
+
+### Make Folders
 * data/sounds/youtube
 * data/sounds/soundcloud
 * data/sounds/effects
 
-###Install###
+### Install
 * ffmpeg
 * libsodium-dev
 * libopus-dev
@@ -21,11 +22,11 @@ TODO:
 * mongodb
 * [rvm](http://rvm.io)
 
-###Configuration###
+### Configuration
 * Rename config.sample to config.rb
 * Fill in relevant values.
 
-###Running###
+### Running
 * cd into root dir
 * install ruby as hinted by Rvm
 * bundle install
