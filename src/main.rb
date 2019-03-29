@@ -1,6 +1,6 @@
 require 'discordrb'
 require 'soundcloud'
-require 'mongo'
+#require 'mongo'
 
 require 'pp'
 
@@ -26,9 +26,9 @@ class Obra
     discord_cbot_settings = $config[:discord]
 
     # db stuff
-    @mongo_client = Mongo::Client.new([ '127.0.0.1:27017' ], :database => 'obra')
-    @db = @mongo_client.database
-    @ranks_collection = @db[:ranks]
+    #@mongo_client = Mongo::Client.new([ '127.0.0.1:27017' ], :database => 'obra')
+    #@db = @mongo_client.database
+    #@ranks_collection = @db[:ranks]
 
     # Discordrb command bot
     @discord_cbot = Discordrb::Commands::CommandBot.new discord_cbot_settings
@@ -67,7 +67,7 @@ class Obra
     @discord_cbot.command(:reset_levels) do |e, *args|
       return unless is_admin? e.user.id
 
-      @ranks_collection.delete_many {}
+      #@ranks_collection.delete_many {}
       ':boom: Resetted user levels :boom:'
     end
 
@@ -86,28 +86,28 @@ class Obra
       user_id = e.author.id
       row = {_id: user_id}
 
-      old_row = @ranks_collection.find(row).first
-      unless old_row
-        @ranks_collection.insert_one row.merge({posts: 1, level: 0})
-      else
-        # if user record is already created update it
-        new_row = old_row
-        posts = new_row[:posts] + 1
+      #old_row = @ranks_collection.find(row).first
+      #unless old_row
+      #  @ranks_collection.insert_one row.merge({posts: 1, level: 0})
+      #else
+      #  # if user record is already created update it
+      #  new_row = old_row
+      #  posts = new_row[:posts] + 1
 
-        # calculate level
-        level = Math.log2(posts).floor
+      #  # calculate level
+      #  level = Math.log2(posts).floor
 
-        # if user leveled up, notify in channel
-        if level > old_row[:level]
-          @discord_cbot.send_message e.channel.id, "<@#{user_id}> Just leveld up!\nHe's now Level #{level} - #{@lvl_titles[level]}"
-        end
+      #  # if user leveled up, notify in channel
+      #  if level > old_row[:level]
+      #    @discord_cbot.send_message e.channel.id, "<@#{user_id}> Just leveld up!\nHe's now Level #{level} - #{@lvl_titles[level]}"
+      #  end
 
-        # save updated stats
-        new_row = new_row.merge!({level: level, posts: posts})
-        @ranks_collection.update_one row, new_row
-      end
+      #  # save updated stats
+      #  new_row = new_row.merge!({level: level, posts: posts})
+      #  @ranks_collection.update_one row, new_row
+      #end
 
-      p @ranks_collection.find
+      #p @ranks_collection.find
       #e.respond e.message
     end
 
@@ -123,17 +123,17 @@ class Obra
     end
 
     # return leaderboards
-    @discord_cbot.command(:levels, description: 'Ranks of Members based on their activity.', usage: '!levels') do |e|
-      ret = "**User Levels:**\n\n"
+    #@discord_cbot.command(:levels, description: 'Ranks of Members based on their activity.', usage: '!levels') do |e|
+    #  ret = "**User Levels:**\n\n"
 
-      # get user ranks in descending order
-      @ranks_collection.find.sort({level: -1}).each do |ur|
-        lvl = ur['level']
-        ret += "<@#{ur['_id']}> lvl#{lvl} *#{@lvl_titles[lvl]}*\n"
-      end
+    #  # get user ranks in descending order
+    #  @ranks_collection.find.sort({level: -1}).each do |ur|
+    #    lvl = ur['level']
+    #    ret += "<@#{ur['_id']}> lvl#{lvl} *#{@lvl_titles[lvl]}*\n"
+    #  end
 
-      ret
-    end
+    #  ret
+    #end
 
     @discord_cbot.ready do |e|
       #p discord_cbot.servers
