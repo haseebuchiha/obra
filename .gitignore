@@ -4,7 +4,7 @@
 data/*
 
 production
-logs
+log
 
 src/config.rb
 Gemfile.lock
