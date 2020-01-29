@@ -23,6 +23,8 @@ class Obra
   attr_reader :song_queue
 
   def initialize
+    puts "In initializing OBRA"
+
     discord_cbot_settings = $config[:discord]
 
     # db stuff
@@ -267,6 +269,7 @@ class Obra
 
       # 's' as first param means searched song play
       if url == 's'
+        "Playing Soundcloud Song"
         n = args[1].to_i - 1
         text_channel.send_message ':notes: Downloading song... Please wait.'
         songs_details = [download_sc_track_mp3(sc_client, @searched_songs_queue[n])]
@@ -409,5 +412,7 @@ class Obra
   end
 end
 
+puts "Creating Bot Instance"
 bot = Obra.new
+puts "Running bot..."
 bot.run

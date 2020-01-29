@@ -13,6 +13,7 @@ module SoundCloudHelper
   def download_sc_mp3 sc_url
 
     # call the resolve endpoint with a track url
+    puts "Downloading Sound Cloud song..."
     begin
       track = sc_client.get('/resolve', url: sc_url)
     rescue Exception => e

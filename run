@@ -10,5 +10,5 @@ then
   echo $irbc
   cd src;bundle exec irb
 else
-  clear;cd src;bundle exec ruby main.rb > log
+  clear;cd src;bundle exec ruby main.rb
 fi
