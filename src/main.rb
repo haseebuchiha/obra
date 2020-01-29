@@ -1,6 +1,6 @@
 require 'discordrb'
 require 'soundcloud'
-#require 'mongo'
+require 'sqlite3'
 
 require 'pp'
 
@@ -27,8 +27,9 @@ class Obra
 
     discord_cbot_settings = $config[:discord]
 
-    # db stuff
-    #@mongo_client = Mongo::Client.new([ '127.0.0.1:27017' ], :database => 'obra')
+    #db stuff
+    @db = SQLite3::Database.new 'database.db'
+    p @db
     #@db = @mongo_client.database
     #@ranks_collection = @db[:ranks]
 

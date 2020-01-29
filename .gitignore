@@ -8,3 +8,5 @@ log
 
 src/config.rb
 Gemfile.lock
+
+src/database.db
