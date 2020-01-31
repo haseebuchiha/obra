@@ -1,10 +1,10 @@
 require 'discordrb'
 require 'soundcloud'
-require 'sqlite3'
 
 require 'pp'
 
 require_relative 'config'
+require_relative 'database'
 require_relative 'helpers/common_helper'
 require_relative 'helpers/soundcloud_helper'
 require_relative 'helpers/youtube_helper'
@@ -25,16 +25,12 @@ class Obra
   def initialize
     puts "In initializing OBRA"
 
-    discord_cbot_settings = $config[:discord]
-
-    #db stuff
-    @db = SQLite3::Database.new 'database.db'
-    p @db
-    #@db = @mongo_client.database
-    #@ranks_collection = @db[:ranks]
+    #Initialize Database
+    @db = Database.get_db
 
     # Discordrb command bot
-    @discord_cbot = Discordrb::Commands::CommandBot.new discord_cbot_settings
+    discord_cbot_config = $config[:discord]
+    @discord_cbot = Discordrb::Commands::CommandBot.new discord_cbot_config
 
     # this holds songs queued in form of {name: 'song name', local_path: 'path/to/song.mp3'...}
     @songs_queue = []
@@ -50,11 +46,6 @@ class Obra
 
     # flag weather play same song over n over again or not
     @loop_playback = false
-
-    # titles awarded for each level
-    @lvl_titles = ['Nanga','Thora Nanga','Halka Nanga','Sasta','Thora Sasta', 'Halka Sasta']
-    @lvl_titles += ['Mehnga','Thora Mehnga','Halka Mehnga','Ok Mehnga','Kafi Mehnga', 'Pro']
-    @lvl_titles += ['Kafi pro','VPro','Uff Pro','Haye Allah Pro','GG Pro', 'Next Level PRO']
   end
 
   def run
@@ -87,31 +78,20 @@ class Obra
     #  user levels up at each power of 2 posts, 1, 2, 4, 8, 16 etc
     @discord_cbot.message(contains: '') do |e|
       user_id = e.author.id
-      row = {_id: user_id}
+      user = Database.get_or_create_user_rank_row user_id
 
-      #old_row = @ranks_collection.find(row).first
-      #unless old_row
-      #  @ranks_collection.insert_one row.merge({posts: 1, level: 0})
-      #else
-      #  # if user record is already created update it
-      #  new_row = old_row
-      #  posts = new_row[:posts] + 1
+      messages = user[1].to_i + 1
 
-      #  # calculate level
-      #  level = Math.log2(posts).floor
+      # calculate level
+      rank = Math.log2(messages).floor
 
-      #  # if user leveled up, notify in channel
-      #  if level > old_row[:level]
-      #    @discord_cbot.send_message e.channel.id, "<@#{user_id}> Just leveld up!\nHe's now Level #{level} - #{@lvl_titles[level]}"
-      #  end
+      # if user leveled up, notify in channel
+      if rank > user[2].to_i
+        @discord_cbot.send_message e.channel.id, "<@#{user_id}> Just leveld up!\nHe's now Level #{rank} - #{$config[:lvl_titles][rank]}"
+      end
 
-      #  # save updated stats
-      #  new_row = new_row.merge!({level: level, posts: posts})
-      #  @ranks_collection.update_one row, new_row
-      #end
-
-      #p @ranks_collection.find
-      #e.respond e.message
+      # save updated stats
+      user = Database.update_user(user_id, messages, rank)
     end
 
     # reply user via PM if he mentions bot
@@ -126,23 +106,22 @@ class Obra
     end
 
     # return leaderboards
-    #@discord_cbot.command(:levels, description: 'Ranks of Members based on their activity.', usage: '!levels') do |e|
-    #  ret = "**User Levels:**\n\n"
+    @discord_cbot.command(:levels, description: 'Ranks of Members based on their activity.', usage: '!levels') do |e|
+      ret = "**User Levels:**\n\n"
 
-    #  # get user ranks in descending order
-    #  @ranks_collection.find.sort({level: -1}).each do |ur|
-    #    lvl = ur['level']
-    #    ret += "<@#{ur['_id']}> lvl#{lvl} *#{@lvl_titles[lvl]}*\n"
-    #  end
+      # get user ranks in descending order
+      Database.top_ranked_users(11).each do |row|
+        ret += "<@#{row[0]}> lvl#{row[1]} *#{$config[:lvl_titles][row[2]]}*\n"
+      end
 
-    #  ret
-    #end
+      ret
+    end
 
     @discord_cbot.ready do |e|
       #p discord_cbot.servers
       puts "Running bot in #{$env} Environtment\n"
       puts "Inivte URL ".red + @discord_cbot.invite_url
-      @discord_cbot.update_status('Playing', 'DivineLight', 'http://www.twitch.tv/blackdivine')
+      @discord_cbot.update_status('Playing', 'DivineLight', 'http://www.twitch.tv/divineslight')
     end
 
     @discord_cbot.command(:ping, description: 'To display Bot\'s ping.', usage: '!ping') do |e|
@@ -155,230 +134,241 @@ class Obra
       e.user.pm e.message.content
     end
 
+    #NOTE: DiscordRb gem has bug cant play right now.
     # connects to your voice channel
-    @discord_cbot.command(:voice, description: 'Joins your voice channel.', usage: '!voice') do |e|
-      user = e.user
-      vchannel = user.voice_channel
+    #@discord_cbot.command(:voice, description: 'Joins your voice channel.', usage: '!voice') do |e|
+    #  user = e.user
+    #  vchannel = e.user.voice_channel
 
-      if vchannel.nil?
-        "Please sit in a voice channel yourself <@#{user.id}>"
-      else
-        @voice_bot = @discord_cbot.voice_connect(vchannel)
-        @voice_bot.volume = DEFAULT_VOLUME / 100.0
-        "Connected to **##{vchannel.name}** - **Lets Go!**"
-      end
-    end
+    #  if vchannel.nil?
+    #    "Please sit in a voice channel yourself <@#{user.id}>"
+    #  else
+    #    p "Voice Bot: #{@voice_bot.inspect}..."
+    #    @voice_bot = @discord_cbot.voice_connect(vchannel)
+    #    p "Voice Bot: #{@voice_bot.inspect}..."
+    #    @voice_bot.volume = DEFAULT_VOLUME / 100.0
+    #    "Connected to **##{vchannel.name}** - **Lets Go!**"
+    #    p "Voice Bot: #{@voice_bot.inspect}..."
+    #  end
+    #end
 
 
     # disconnects from your voice channel
-    @discord_cbot.command(:leave, description: 'Leaves your voice channel!', usage: '!leave') do |e|
-      return if @voice_bot.nil?
+    #@discord_cbot.command(:leave, description: 'Leaves your voice channel!', usage: '!leave') do |e|
+    #  return if @voice_bot.nil?
 
-      @voice_bot.destroy
-      @voice_bot = nil
-      "Left voice channel - **Happy?**"
-    end
+    #  @voice_bot.destroy
+    #  @voice_bot = nil
+    #  "Left voice channel - **Happy?**"
+    #end
 
 
-    # Pause playing sound
-    @discord_cbot.command(:pause) do |e|
-      @voice_bot.pause
-      "**Stopped - Use !unpause to resume Playback**"
-    end
+    ## Pause playing sound
+    #@discord_cbot.command(:pause) do |e|
+    #  @voice_bot.pause
+    #  "**Stopped - Use !unpause to resume Playback**"
+    #end
 
-    # Stops playing sound
-    @discord_cbot.command(:stop) do |e|
-      @loop_playback = false if @loop_playback
+    ## Stops playing sound
+    #@discord_cbot.command(:stop) do |e|
+    #  @loop_playback = false if @loop_playback
 
-      @stop_playing = true
-      @voice_bot.stop_playing true
-      "Stopped playback."
-    end
+    #  @stop_playing = true
+    #  @voice_bot.stop_playing true
+    #  "Stopped playback."
+    #end
 
-    # UnPause playing sound
-    @discord_cbot.command(:unpause, description: 'Resumes playback of song') do |e|
-      @voice_bot.continue
-      "**Resumed playback.**"
-    end
+    ## UnPause playing sound
+    #@discord_cbot.command(:unpause, description: 'Resumes playback of song') do |e|
+    #  @voice_bot.continue
+    #  "**Resumed playback.**"
+    #end
 
-    # Skip song for n seconds
-    @discord_cbot.command(:fwd, description: 'Forward song for given seconds') do |e, *args|
-      secs = args[0].to_f
+    ## Skip song for n seconds
+    #@discord_cbot.command(:fwd, description: 'Forward song for given seconds') do |e, *args|
+    #  secs = args[0].to_f
 
-      @voice_bot.skip secs
-      "**Skipped song for #{secs} Seconds.**\nI didn't like this part too xD"
-    end
+    #  @voice_bot.skip secs
+    #  "**Skipped song for #{secs} Seconds.**\nI didn't like this part too xD"
+    #end
 
-    # Set or get volume of playback
-    @discord_cbot.command(:vol, description: 'To adjust volume', usage: '!vol 0-100') do |e,*args|
-      return @discord_cbot.send_message(e.channel.id, "Please use !voice first.") unless @voice_bot
+    ## Set or get volume of playback
+    #@discord_cbot.command(:vol, description: 'To adjust volume', usage: '!vol 0-100') do |e,*args|
+    #  return @discord_cbot.send_message(e.channel.id, "Please use !voice first.") unless @voice_bot
 
-      vol = args[0]
+    #  vol = args[0]
 
-      if vol.nil?
-        "Current volume: *#{@voice_bot.volume * 100}*"
-      else
-        vol = vol.to_f
-        vol = 100 if vol > 100
-        @voice_bot.volume = vol.to_f / 100
-        "Volume set to #{vol}"
-      end
-    end
+    #  if vol.nil?
+    #    "Current volume: *#{@voice_bot.volume * 100}*"
+    #  else
+    #    vol = vol.to_f
+    #    vol = 100 if vol > 100
+    #    @voice_bot.volume = vol.to_f / 100
+    #    "Volume set to #{vol}"
+    #  end
+    #end
 
     # plays a sound effect placed in data/sounds directory
     # shows list of available sounds when the list is empty
-    @discord_cbot.command(:pse) do |e, *args|
-      se_name = args[0]
-      text_channel = e.channel
+    #@discord_cbot.command(:pse) do |e, *args|
+    #  se_name = args[0]
+    #  text_channel = e.channel
 
-      if se_name.nil?
-        files = Dir.glob File.join(SOUND_EFFECTD_ROOT, '*.mp3')
-        sounds_list = files.join("\n").gsub(sounds_dir,'').gsub('.mp3','')
-        p sounds_list
-        "**Available Sounds:**\n\n#{sounds_list}"
-      else
-        return @discord_cbot.send_message(text_channel.id, "Please use !voice first.") unless @voice_bot
-        return @discord_cbot.send_message(text_channel.id, "Stop music first..") if @voice_bot.isplaying?
+    #  if se_name.nil?
+    #    files = Dir.glob File.join(SOUND_EFFECTD_ROOT, '*.mp3')
+    #    sounds_list = files.join("\n").gsub(sounds_dir,'').gsub('.mp3','')
+    #    p sounds_list
+    #    "**Available Sounds:**\n\n#{sounds_list}"
+    #  else
+    #    return @discord_cbot.send_message(text_channel.id, "Please use !voice first.") unless @voice_bot
+    #    return @discord_cbot.send_message(text_channel.id, "Stop music first..") if @voice_bot.isplaying?
 
-        sound_path = File.join SOUND_EFFECTD_ROOT, "#{se_name}.mp3"
-        @voice_bot.play_file sound_path
-        nil
-      end
+    #    sound_path = File.join SOUND_EFFECTD_ROOT, "#{se_name}.mp3"
+    #    @voice_bot.play_file sound_path
+    #    nil
+    #  end
 
-    end
+    #end
 
-    # A simple command that plays back an mp3 file.
-    play_usage = '!play url of Soundcloud/Youtube or search term'
-    play_description = 'Plays Soundcloud or Youtube Songs. Can search Soundcloud too'
-    @discord_cbot.command(:play, description: play_description, usage: play_usage) do |e, *args|
-      url = args[0]
-      text_channel = e.channel
-      puts "URL Given to Play: #{url.inspect}\n"
+    #play_usage = '!play url of Soundcloud/Youtube or search term'
+    #play_description = 'Plays Soundcloud or Youtube Songs. Can search Soundcloud too'
+    #@discord_cbot.command(:play, description: play_description, usage: play_usage) do |e, *args|
+    #  url = args[0]
+    #  text_channel = e.channel
+    #  voice_bot = e.voice
+    #  puts "URL Given to Play: #{url.inspect}\n"
+    #  puts "VoiceBot: #{voice_bot.inspect}\n"
+    #  voice_bot.play_file './theme_star_wars.mp3'
 
-      # make sure we have a valid voice_bot
-      return text_channel.send_temporary_message(':x: Please sit in a Voice Channel and use !voice first', 5) unless @voice_bot
+
+    #  # make sure we have a valid voice_bot
+    #  return text_channel.send_temporary_message(':x: Please sit in a Voice Channel and use !voice first', 5) unless @voice_bot
 
 
-      # no url specified, resume song playing
-      if url.nil?
-        @stop_playing = false
-        text_channel.send_message ':musical_note: Resumed playback...' and return nil
-        play_songs text_channel
-      end
+    #  # no url specified, resume song playing
+    #  if url.nil?
+    #    puts "Url is nil"
+    #    @stop_playing = false
+    #    text_channel.send_message ':musical_note: Resumed playback...' and return nil
+    #    play_songs text_channel
+    #  end
 
-      songs_details = nil
+    #  puts "Sont details = nil"
+    #  songs_details = nil
 
-      # 's' as first param means searched song play
-      if url == 's'
-        "Playing Soundcloud Song"
-        n = args[1].to_i - 1
-        text_channel.send_message ':notes: Downloading song... Please wait.'
-        songs_details = [download_sc_track_mp3(sc_client, @searched_songs_queue[n])]
-      elsif url.include? 'soundcloud'
-        text_channel.send_message ':notes: Downloading SoundCloud song... Please wait.'
-        songs_details = download_sc_mp3 url
-      elsif url.include? 'youtube'
-        text_channel.send_message ':notes: Downloading Youtube song... Please wait.'
-        songs_details = download_yt_mp3 url
-      else
-        # not a proper URL so we search
-        q = args.join ' '
-        @searched_songs_queue = sc_search q
-        text_channel.send_message ":mag_right: Search Results: (use !play s n)\n#{format_songs_for_printing @searched_songs_queue}"
-        return nil
-      end
+    #  puts "Returning, url" + url
+    #  return
+    #  # 's' as first param means searched song play
+    #  if url == 's'
+    #    "Playing Soundcloud Song"
+    #    n = args[1].to_i - 1
+    #    text_channel.send_message ':notes: Downloading song... Please wait.'
+    #    songs_details = [download_sc_track_mp3(sc_client, @searched_songs_queue[n])]
+    #  elsif url.include? 'soundcloud'
+    #    text_channel.send_message ':notes: Downloading SoundCloud song... Please wait.'
+    #    songs_details = download_sc_mp3 url
+    #  elsif url.include? 'youtube'
+    #    text_channel.send_message ':notes: Downloading Youtube song... Please wait.'
+    #    songs_details = download_yt_mp3 url
+    #  else
+    #    # not a proper URL so we search
+    #    q = args.join ' '
+    #    @searched_songs_queue = sc_search q
+    #    text_channel.send_message ":mag_right: Search Results: (use !play s n)\n#{format_songs_for_printing @searched_songs_queue}"
+    #    return nil
+    #  end
+    #
+    #  return @discord_cbot.send_message(text_channel.id, 'Some error, please contact creator of this Bot.') if songs_details.nil?
+    #
+    #  # add songs to queue, and play first song
+    #  queue_songs songs_details
+    #  play_songs text_channel
+    #end
 
-      return @discord_cbot.send_message(text_channel.id, 'Some error, please contact creator of this Bot.') if songs_details.nil?
+    #@discord_cbot.command(:q, description: 'Current queued songs, shuffle, loop or clear', usage: "\n!q\n!q shuffle\n!q loop\n!q clear") do |e, *args|
+    #  param = args[0]
 
-      # add songs to queue, and play first song
-      queue_songs songs_details
-      play_songs text_channel
-    end
+    #  if param == 'shuffle'
+    #    @songs_queue.shuffle!
+    #    'Shuffled song Queue.'
+    #  elsif param == 'loop'
+    #    # toggle looping playback
+    #    @loop_playback = !@loop_playback
+    #    @loop_playback ? 'Looping current track' : 'Not looping current track now'
+    #  elsif param == 'clear'
+    #    @songs_queue = []
+    #    @voice_bot.stop_playing true
+    #    'Cleared song queue'
+    #  else
+    #    ret = "**Song Queue:**\n\n" + format_songs_for_printing(@songs_queue)
+    #  end
+    #end
 
-    @discord_cbot.command(:q, description: 'Current queued songs, shuffle, loop or clear', usage: "\n!q\n!q shuffle\n!q loop\n!q clear") do |e, *args|
-      param = args[0]
+    ## skips current song and plays next in queue
+    #@discord_cbot.command(:skip, description: 'Skips current song and plays next.', usage: '!skip') do |e|
+    #  text_channel = e.channel
+    #  song_details = @songs_queue.first
 
-      if param == 'shuffle'
-        @songs_queue.shuffle!
-        'Shuffled song Queue.'
-      elsif param == 'loop'
-        # toggle looping playback
-        @loop_playback = !@loop_playback
-        @loop_playback ? 'Looping current track' : 'Not looping current track now'
-      elsif param == 'clear'
-        @songs_queue = []
-        @voice_bot.stop_playing true
-        'Cleared song queue'
-      else
-        ret = "**Song Queue:**\n\n" + format_songs_for_printing(@songs_queue)
-      end
-    end
+    #  return unless song_details # return if no song present in queue
 
-    # skips current song and plays next in queue
-    @discord_cbot.command(:skip, description: 'Skips current song and plays next.', usage: '!skip') do |e|
-      text_channel = e.channel
-      song_details = @songs_queue.first
+    #  @loop_playback = false if @loop_playback
 
-      return unless song_details # return if no song present in queue
+    #  # stop current song, play_songs will automatically
+    #  # remove this song from queue and start next song
+    #  @voice_bot.stop_playing
 
-      @loop_playback = false if @loop_playback
+    #  "Skipped **#{song_details[:name]}** on request of <@#{e.user.id}>"
+    #end
 
-      # stop current song, play_songs will automatically
-      # remove this song from queue and start next song
-      @voice_bot.stop_playing
+    ## plays next song in queue
+    #def play_songs discord_text_channel
+    #  song_details = @songs_queue.first
 
-      "Skipped **#{song_details[:name]}** on request of <@#{e.user.id}>"
-    end
+    #  # Notify if no more songs left.
+    #  return discord_text_channel.send_message 'Song queue exhausted...' unless song_details
 
-    # plays next song in queue
-    def play_songs discord_text_channel
-      song_details = @songs_queue.first
+    #  # return if a song is already being played
+    #  return discord_text_channel.send_temporary_message ':musical_note: Already playing, Song queued...', 5 if @voice_bot.isplaying?
 
-      # Notify if no more songs left.
-      return discord_text_channel.send_message 'Song queue exhausted...' unless song_details
+    #  # loop through all songs playing them until queue finishes
+    #  # play_file is a blocking call
+    #  while @songs_queue.length > 0
+    #    song_details = @songs_queue.first
 
-      # return if a song is already being played
-      return discord_text_channel.send_temporary_message ':musical_note: Already playing, Song queued...', 5 if @voice_bot.isplaying?
+    #    puts "Song queue now: #{@songs_queue.inspect}\n-------\n"
 
-      # loop through all songs playing them until queue finishes
-      # play_file is a blocking call
-      while @songs_queue.length > 0
-        song_details = @songs_queue.first
+    #    send_msg discord_text_channel.id, ":musical_note: Now Playing **#{song_details[:name]}** - #{song_details[:duration]}"
 
-        puts "Song queue now: #{@songs_queue.inspect}\n-------\n"
+    #    # catch exceptions so we don't break player if some error occurs in play_file
+    #    begin
+    #      mp3_path = song_details[:local_path]
 
-        send_msg discord_text_channel.id, ":musical_note: Now Playing **#{song_details[:name]}** - #{song_details[:duration]}"
+    #      song_details[:started_at] = Time.now
+    #      @voice_bot.play_file mp3_path
 
-        # catch exceptions so we don't break player if some error occurs in play_file
-        begin
-          mp3_path = song_details[:local_path]
+    #      # keep playing same song while @loop_playback is true
+    #      if @loop_playback
+    #        while @loop_playback
+    #          @voice_bot.play_file mp3_path
+    #        end
+    #      end
+    #    rescue Exception => e
+    #      puts "\nExcception playing file #{mp3_path}\nException: #{e.inspect}"
+    #    end
+    #    #send_msg discord_text_channel.id, "Finished playing **#{song_details[:name]}**  - #{song_details[:duration]}"
 
-          song_details[:started_at] = Time.now
-          @voice_bot.play_file mp3_path
+    #    # if playback was stopped wait till it's resumed again and play same song from start
+    #    if @stop_playing
+    #      while @stop_playing
+    #        sleep 1
+    #      end
+    #    else
+    #      # song finished, drop it from queue, and play next song
+    #      @songs_queue.shift
+    #    end
 
-          # keep playing same song while @loop_playback is true
-          if @loop_playback
-            while @loop_playback
-              @voice_bot.play_file mp3_path
-            end
-          end
-        rescue Exception => e
-          puts "\nExcception playing file #{mp3_path}\nException: #{e.inspect}"
-        end
-        #send_msg discord_text_channel.id, "Finished playing **#{song_details[:name]}**  - #{song_details[:duration]}"
-
-        # if playback was stopped wait till it's resumed again and play same song from start
-        if @stop_playing
-          while @stop_playing
-            sleep 1
-          end
-        else
-          # song finished, drop it from queue, and play next song
-          @songs_queue.shift
-        end
-
-      end # while @songs_queue.length > 0
-    end
+    #  end # while @songs_queue.length > 0
+    #end
 
   end
 

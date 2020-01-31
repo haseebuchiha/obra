@@ -12,7 +12,7 @@ $environtmetns = {
     soundcloud: {
       client_id: 'client_id',
       client_secret: 'client_secret'
-    }
+    },
   },
   production: {
     discord: {
@@ -35,4 +35,3 @@ $environtmetns = {
 # project root dir
 $env = File.exists?('production') ? :production : :development
 $config = $environtmetns[$env]
-

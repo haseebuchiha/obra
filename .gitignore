@@ -7,6 +7,5 @@ production
 log
 
 src/config.rb
-Gemfile.lock
-
-src/database.db
+database.db
+test.rb
