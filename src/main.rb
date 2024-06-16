@@ -30,7 +30,7 @@ class Obra
 
     # Discordrb command bot
     discord_cbot_config = $config[:discord]
-    @discord_cbot = Discordrb::Commands::CommandBot.new discord_cbot_config
+    @discord_cbot = Discordrb::Commands::CommandBot.new **discord_cbot_config
 
     # this holds songs queued in form of {name: 'song name', local_path: 'path/to/song.mp3'...}
     @songs_queue = []
@@ -78,6 +78,7 @@ class Obra
     #  user levels up at each power of 2 posts, 1, 2, 4, 8, 16 etc
     @discord_cbot.message(contains: '') do |e|
       user_id = e.author.id
+      p 'userid', user_id
       user = Database.get_or_create_user_rank_row user_id
 
       messages = user[1].to_i + 1
@@ -102,6 +103,7 @@ class Obra
     # joins words passed by args and then use it as search term to search gif
     # returns a random gif from all the searched gifs
     @discord_cbot.command(:gif, description: 'Fetches a random gif from Giphy based on your query.', usage: '!gif cats') do |e,*args|
+      p args
       gif_search args.join(' ')
     end
 

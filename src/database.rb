@@ -26,7 +26,7 @@ class Database
   end
 
   def self.update_user(user_id, messages, rank)
-    rows = @db.execute "UPDATE user_ranks SET messages_count=?, rank=? WHERE user_id = ?", messages, rank,  user_id
+    rows = @db.execute "UPDATE user_ranks SET messages_count=?, rank=? WHERE user_id = ?", [messages, rank,  user_id]
     get_user_rank_row user_id
   end
 

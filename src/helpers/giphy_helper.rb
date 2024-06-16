@@ -1,11 +1,11 @@
 
 module GiphyHelper
-  API_BETA_KEY = 'dc6zaTOxFJmzC'
+  API_BETA_KEY = 'HQ5v7PG0S370v0HHyCnEZEVWqXatlgXm'
   API_ROOT = 'http://api.giphy.com/v1/'
 
   def gif_search q
     # limit 100 is max
-    search_url = API_ROOT + "gifs/search?q=#{URI.encode q}&api_key=#{API_BETA_KEY}&limit=100"
+    search_url = API_ROOT + "gifs/search?q=#{URI.encode_uri_component q}&api_key=#{API_BETA_KEY}&limit=100"
     p search_url
 
     res = HTTParty.get search_url
