@@ -103,7 +103,6 @@ class Obra
     # joins words passed by args and then use it as search term to search gif
     # returns a random gif from all the searched gifs
     @discord_cbot.command(:gif, description: 'Fetches a random gif from Giphy based on your query.', usage: '!gif cats') do |e,*args|
-      p args
       gif_search args.join(' ')
     end
 
